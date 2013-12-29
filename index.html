@@ -1,0 +1,336 @@
+<!DOCTYPE html
+PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<meta content="width=device-width, initial-scale=1" name="viewport" /> 
+
+<script src="/socket.io/socket.io.js" type="text/javascript">
+</script>
+
+<script type="text/javascript">
+	
+	var boxselected=1;
+	var synthmode=0;
+	
+	function clear_stat(){
+		while (stat_div.firstChild)
+		{
+    	stat_div.removeChild(stat_div.firstChild);
+		}
+	}
+	
+	function boxselect(s){
+		boxselected=s;
+	}
+
+	function rf_click()
+	{
+		synthmode=1;
+		rf_button.style.color="#33FF33";
+		rf_button.style.background="#006633";
+		fm_button.style.color="black";
+		fm_button.style.background="#AAAAAA";
+		mode_rf();
+	}
+	
+	function fm_click()
+	{
+		synthmode=2;
+		fm_button.style.color="#33FF33";
+		fm_button.style.background="#006633";
+		rf_button.style.color="black";
+		rf_button.style.background="#AAAAAA";
+		mode_fm();
+	}
+	
+	function off_click()
+	{
+		synthmode=0;
+		fm_button.style.color="black";
+		fm_button.style.background="#AAAAAA";
+		rf_button.style.color="black";
+		rf_button.style.background="#AAAAAA";
+		mode_off();
+	}
+
+	function db_click(nval){
+		power_box.value=nval;
+		if (synthmode==1)
+		{
+			mode_rf();
+		}
+		else if (synthmode==2)
+		{
+			mode_fm();
+		}
+	}
+
+	function kp_click(nval){
+		if (boxselected==1)
+		{
+			handle=freq_box;
+		}
+		else if (boxselected==2)
+		{
+			handle=tone_box;
+		}
+		ctext=handle.value;
+		if (nval<10) // a digit was pressed
+		{
+			ctext=ctext+nval;
+			handle.value=ctext;
+		}
+		else if (nval==101) // dot
+		{
+			ctext=ctext+'.';
+			handle.value=ctext;
+		}
+		else if (nval==100) // del was pressed
+		{
+			len=ctext.length;
+			if (len>0)
+			{
+				ctext=ctext.substring(0, len-1);
+				handle.value=ctext;
+			}
+		}
+		else if (nval==102) // deldel was pressed
+		{
+				handle.value='';
+		}
+		else if (nval==103) // khz was pressed
+		{
+			fr=parseFloat(ctext);
+			fr=fr*1000;
+			handle.value=fr.toString();
+			if (boxselected==1)
+			{
+				tone_box.focus();
+				boxselected=2;
+			}
+			else
+			{
+				freq_box.focus();
+				boxselected=1;
+			}
+		}
+		else if (nval==104) // mhz was pressed
+		{
+			fr=parseFloat(ctext);
+			fr=fr*1000000;
+			handle.value=fr.toString();
+			if (boxselected==1)
+			{
+				tone_box.focus();
+				boxselected=2;
+			}
+			else
+			{
+				freq_box.focus();
+				boxselected=1;
+			}
+		}
+	}
+	
+	function mode_rf(){
+		var statustext = document.createTextNode("Status: Powering up RF... ");
+		clear_stat();
+		stat_div.appendChild(statustext);
+		socket.emit('freq', { command: freq_box.value });
+		socket.emit('power', { command: power_box.value });
+		socket.emit('mode', { command: 'rf' });
+	}
+	
+	function mode_fm(){
+		var statustext = document.createTextNode("Status: Powering up FM mode... ");
+		clear_stat();
+		stat_div.appendChild(statustext);
+		socket.emit('freq', { command: freq_box.value });
+		socket.emit('tone', { command: tone_box.value });
+		socket.emit('power', { command: power_box.value });
+		socket.emit('mode', { command: 'fm' });
+	}
+	
+	function mode_off(){
+		var statustext = document.createTextNode("Status: Powering off... ");
+		clear_stat();
+		stat_div.appendChild(statustext);
+		socket.emit('freq', { command: '0.0' });
+		socket.emit('power', { command: '-100.0' });
+		socket.emit('mode', { command: 'rf' });
+	}
+
+	function all_off_click(){
+		var statustext = document.createTextNode("Status: Setting all off... ");
+		clear_stat();
+		stat_div.appendChild(statustext);
+		socket.emit('action', { command: 'all_off' });
+	}
+
+	var statusready = document.createTextNode("Status: Ready ");
+	var statusdone = document.createTextNode("Done ");
+
+	var socket = io.connect();
+
+	socket.on('status', function (data)
+	{
+		if (data.stat=='idle')
+		{
+			stat_div.appendChild(statusready);		
+		}
+		if (data.stat=='done')
+		{
+			stat_div.appendChild(statusdone);
+		}
+  });
+	
+</script>
+
+<style type="text/css">
+.form
+{  
+	margin: 5em auto 3em;  
+	width: 300px;  
+}
+label
+{
+	width: 8em;
+	float: left;
+	text-align: right;
+	margin-right: 0.5em;
+	display: block
+}
+#id_status
+{
+	background-color:#BF0000;
+	border:medium;
+	color:#FFFFFF;
+}
+#id_freq
+{
+	color:blue;
+}
+#id_tone
+{
+	color:blue;
+}
+#id_power
+{
+	color:#CC00FF;
+}
+input[class*='kp']
+{
+	color:blue;
+	width: 5em;
+}
+input[class='kpdel']
+{
+	color:red;
+}
+input[class='kpclr']
+{
+	color:red;
+}
+input[class='kpmul']
+{
+	color:blue;
+}
+input[class='kpmode']
+{
+	color:black;
+	background:#AAAAAA;
+}
+input[class='kpoff']
+{
+	color:black;
+	background:#AAAAAA;
+}
+input[class='pwr']
+{
+	color:#CC00FF;
+	width: 2.2em;
+}
+</style>
+
+<title>BBB-Synth</title>
+</head>
+<body>
+<h1>BBB-Synthesiser</h1>
+<p>
+	<label for="id_freq">Frequency (Hz)</label>
+	<input type = "text" onclick="boxselect(1);" value ="10000.0" name = "box_freq" id="id_freq" class="input">
+</p>
+<p>
+	<label for="id_tone">Modulation (Hz)</label>
+	<input type = "text" onclick="boxselect(2);" value ="1000.0" name = "box_tone" id="id_tone" class="input">
+</p>
+<p>
+	<label for="id_power">Power (dB)</label>
+	<input type = "text" readonly value ="0.0" name = "box_power" id="id_power" class="input">
+</p>
+<p>
+  <label for="id_button1" style="visibility:hidden;">.</label>
+  <input type="submit" class="kp" name="id_button1" id="id_button1" value="1"  onclick="kp_click(1)">
+  <input type="submit" class="kp" name="id_button1" id="id_button2" value="2"  onclick="kp_click(2)">
+  <input type="submit" class="kp" name="id_button1" id="id_button3" value="3"  onclick="kp_click(3)">
+</p>
+<p>
+  <label for="id_button4" style="visibility:hidden;">.</label>
+  <input type="submit" class="kp" name="id_button4" id="id_button4" value="4"  onclick="kp_click(4)">
+  <input type="submit" class="kp" name="id_button5" id="id_button5" value="5"  onclick="kp_click(5)">
+  <input type="submit" class="kp" name="id_button6" id="id_button6" value="6"  onclick="kp_click(6)">
+</p>
+<p>
+  <label for="id_button7" style="visibility:hidden;">.</label>
+  <input type="submit" class="kp" name="id_button7" id="id_button7" value="7"  onclick="kp_click(7)">
+  <input type="submit" class="kp" name="id_button8" id="id_button8" value="8"  onclick="kp_click(8)">
+  <input type="submit" class="kp" name="id_button9" id="id_button9" value="9"  onclick="kp_click(9)">
+</p>
+<p>
+  <label for="id_buttondel" style="visibility:hidden;">.</label>
+  <input type="submit" class="kpdel" name="id_buttondel" id="id_buttondel" value="<"  onclick="kp_click(100)">
+  <input type="submit" class="kp" name="id_button0" id="id_button0" value="0"  onclick="kp_click(0)">
+  <input type="submit" class="kp" name="id_buttondot" id="id_buttondot" value="."  onclick="kp_click(101)">
+</p>
+<p>
+  <label for="id_buttondeldel" style="visibility:hidden;">.</label>
+  <input type="submit" class="kpclr" name="id_buttondeldel" id="id_buttondeldel" value="CLR"  onclick="kp_click(102)">
+  <input type="submit" class="kpmul" name="id_buttonkhz" id="id_buttonkhz" value="kHz"  onclick="kp_click(103)">
+  <input type="submit" class="kpmul" name="id_buttonmhz" id="id_buttonmhz" value="MHz"  onclick="kp_click(104)">
+</p>
+          
+<p>
+  <label for="id_button_rf">Mode</label>
+  <input type="submit" class="kpmode" name="id_button_rf" id="id_button_rf" value="RF"  onclick="rf_click()">
+  <input type="submit" class="kpmode" name="id_button_fm" id="id_button_fm" value="FM"  onclick="fm_click()">
+  <input type="submit" class="kpoff" name="id_button_off" id="id_button_off" value="OFF"  onclick="off_click()">
+</p>
+
+<p>
+  <label for="id_button_db20">Power (dB)</label>
+  <input type="submit" class="pwr" name="id_button_db20" id="id_button_db20" value="-20"  onclick="db_click(-20)">
+  <input type="submit" class="pwr" name="id_button_db18" id="id_button_db18" value="-18"  onclick="db_click(-18)">
+  <input type="submit" class="pwr" name="id_button_db15" id="id_button_db15" value="-15"  onclick="db_click(-15)">
+  <input type="submit" class="pwr" name="id_button_db12" id="id_button_db12" value="-12"  onclick="db_click(-12)">
+  <input type="submit" class="pwr" name="id_button_db10" id="id_button_db10" value="-10"  onclick="db_click(-10)">
+  <input type="submit" class="pwr" name="id_button_db6" id="id_button_db6" value="-6"  onclick="db_click(-6)">
+  <input type="submit" class="pwr" name="id_button_db3" id="id_button_db3" value="-3"  onclick="db_click(-3)">
+  <input type="submit" class="pwr" name="id_button_db0" id="id_button_db0" value="0"  onclick="db_click(0)">
+</p>
+
+
+<div id="id_status"></div>
+<script type="text/javascript">
+	var stat_div = document.getElementById("id_status");
+	var freq_box = document.getElementById("id_freq");
+	var tone_box = document.getElementById("id_tone");
+	var power_box = document.getElementById("id_power");
+	var rf_button = document.getElementById("id_button_rf");
+	var fm_button = document.getElementById("id_button_fm");
+	freq_box.focus();
+</script>
+</body>
+</html>
